@@ -1,0 +1,123 @@
+---
+title: "STAT HW4.5"
+author: "Jeffrey Brover, Edward Chen, Gazi Faud, Colin Jones, and Leah Troskot "
+date: "10/7/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Description of Data
+
+The primary dataset we will be using for our project is called “Yelp Academic Dataset Users” and comes from yelp.com. After cleansing the data and properly formatting it, this dataset contains 22 different variables on 2,189,457 different yelp users. The first variable is “user_id” which contains a 22 character string that uniquely identifies a user. The other character variables in our data are “name”, the user’s first name, and “elite” , a list of years the user was an elite member of yelp. The majority of our data is numerical, including “review_count”, the number of reviews they’ve written, “fans”, the number of fans they have, and “average_stars”, the average rating of all of their reviews. Additionally, the variables “useful”, “funny”, and “cool” indicate how many of each types of vote each user had given, while the variables “compliment_hot”, “compliment_more”, compliment_profile”, “compliment_cute”, “compliment_list”, “compliment_note”, “compliment_plain”, “compliment_cool”, “compliment_funny”, “compliment_writer”, and “compliment_photos” indicate how many of each type of compliment a user has received. The variable, “yelping_since”, is a date variable which tells when the user joined Yelp. Finally, the variable “friends'' contains a list of the user’s friends. On top of these main 22 variables, we also have two other related datasets with all reviews and all tips on Yelp, which can be used to free mine text. 
+
+
+``````{r, echo = TRUE, eval = TRUE}
+#Pie Chart
+load("~/Desktop/STAT405 Home/Final Project/yelp_academic_dataset_user_cleaned.rda")
+yelpdata <- yelp_academic_dataset_user
+slices <- c(apply(yelpdata[,5:7], 2, sum))
+lbls <- c(colnames(yelpdata[,5:7]))
+pct <- round(slices/sum(slices)*100)
+lbls <- paste(lbls, pct) # add percents to labels
+lbls <- paste(lbls,"%",sep="") # add % to labels
+pie(slices, labels = lbls, col=c("indianred2", 
+                                 "forestgreen", "skyblue"),
+    main="Types of Votes Sent by Users on Yelp")
+
+```
+
+Description: This plot shows how often each of the three different types of votes, useful, funny, and cool, are sent by users on the Yelp website. From the pie chart it is clear that approximately half of all votes that users give are to indicate that a review was useful, while only about a fifth of all votes are used to signify a post was funny.
+
+
+``````{r, echo = TRUE, eval = TRUE}
+#Cumulative Density Plot
+library(ggplot2)
+ggplot(yelpdata,aes(yelping_since))+
+  stat_bin(aes(y=cumsum(..count..)),geom="line",bins=30, col = "indianred2", size = 2) + 
+  labs(title = "Total Yelp Users Over Time", 
+       x = "Year, or 'Yelping Since' on Website", 
+       y = "Total Users") + theme_light() + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_x_date(date_labels = "%Y", date_breaks = "2 years") + ylim(0, 2250000)
+```
+Description: This plot displays the overall user count on the website over time. From the data, we see there was a monotonic increase approximately between 2010 to 2016, suggesting the overall popularity increase of the website.
+
+``````{r, echo = TRUE, eval = TRUE}
+#Frequency of Each User Compliment
+newnames <- colnames(yelpdata[,c(11:19)])
+barplot_data<-as.data.frame(colSums(yelpdata[,c(11:19)])/1000)
+barplot_data$`colSums(yelpdata[, c(11:19)])/1000`
+barplot_data$names <-newnames
+barplot_data$names2 <- substr(barplot_data$names,12,nchar(barplot_data$names))
+
+barplot_data$names2 <- c("Hot Stuff",
+                         "Write More",
+                         "Like Your Profile",
+                         "Cute Pic",
+                         "Great List",
+                         "Just a Note",
+                         "Thank You",
+                         "You're Cool",
+                         "You're Funny")
+
+ggplot(barplot_data, aes(y=`colSums(yelpdata[, c(11:19)])/1000`,
+                         x=reorder(names2,
+                                   `colSums(yelpdata[, c(11:19)])/1000`)))+
+  geom_col(fill="indianred2")+
+  labs(title="Frequency of Each User Compliment on Yelp",
+       y="Frequency (Thousand Reviews)",
+       x="Type of Compliment",
+       color = NULL)+
+  theme(plot.title=element_text(color="black", hjust=0.5, size = 20, face="italic"))+
+  geom_hline(aes(yintercept = mean(`colSums(yelpdata[, c(11:19)])/1000`),
+                 color="Average Frequency"),
+             linetype=3,
+             lwd=1)+
+  scale_colour_manual(values = "black") +
+  coord_flip()
+
+```
+Description: This plot shows the frequency of each type of user compliment on Yelp. As shown, by far the most common compliment types are the “Thank You”, “You’re Funny”, and “You’re Cool” compliments, which correspond to the bins "plain", "funny", and "cool" respectively which are far above the average frequency. The “Hot Stuff” ("hot") and “Just a Note” ("note) are near the average, while the rest are barely used. One possible explanation for this may be that the most commonly used compliments have been available on Yelp for a much longer time than the others. 
+
+``````{r, echo = TRUE, eval = TRUE}
+#Years an Elite Users Stays an Elite User
+elite_counts <- c()
+new_yelp_elite <- yelpdata$elite[nchar(yelpdata$elite) != 0]
+
+for (i in 1:length(new_yelp_elite)){
+  elite_counts <- c(elite_counts, count.fields(textConnection(new_yelp_elite[i]), sep = ","))
+}
+
+hist(elite_counts,
+     main = "# of Years an Elite User Stays an Elite User",
+     xlab = "Years",
+     ylab = "# of Users",
+     col = "firebrick2",
+     labels = TRUE,
+     ylim = c(0,36000))
+axis(side = 1, at = c(1:16))
+```
+
+
+Description: This plot visualizes the retention rate of “elite” Yelp users for every year after the user becomes an “elite” member. It’s easily shown how after the first year of membership, the number of “elite” users dramatically drops further and further each coming year. For the first 8 years, the annual retention rate ranges from somewhere between 50% to 75% for each year.
+
+``````{r, echo = TRUE, eval = TRUE}
+#Hex Plot of Reviews and Fans
+#reviews and fans plot
+ggplot(data=yelpdata, aes(x=review_count, y=fans))+
+  labs(title = "Hexagonal Heatmap of Frequency of User Fan and Review Counts",
+       x = "User Review Count",
+       y = "User Number of Fans") +
+  scale_fill_gradient(low="indianred2",high="khaki") +
+  geom_hex(bins=25)+
+  labs(fill = "Frequency")+
+  theme_bw()
+```
+
+Description: 
+Here we can see that the overwhelming majority of Yelp users write zero comments and also have zero fans. This is useful going forward to understand some of the behaviors of most Yelp users. Most of the users who write comments or have some fans are in the lower range of these variables as well. However, we do see a few outliers where they have high amounts of fans or reviews.
+
+

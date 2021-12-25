@@ -1,0 +1,1313 @@
+---
+title: "Group 3 Final Presentation"
+author: "Jeffrey Brover, Edward Chen, Gazi Fuad, Colin Jones, Leah Troskot"
+date: "December 2, 2021"
+output: ioslides_presentation
+runtime: shiny
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(ggplot2)
+library(ggmap)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(grid)
+library(RSQLite)
+library(shiny)
+library(grid)
+library(shinythemes)
+library("shinyWidgets")
+library(png)
+
+## PACKAGES NEEDED FOR ANIMATION
+#install.packages(c("gifski","gapminder", "gganimate", "ggimage", "imager"))
+library(Rcpp)
+library(imager)
+library(ggimage)
+library(magick)
+library(tidyverse)
+library(gganimate)
+library(png)
+library(gapminder)
+library(gifski)
+library(reshape2)
+
+## HEY GUYS 
+
+## PLEASE FEEL FREE TO EDIT ANY OF THE FOLLOWING INTRODUCTION TYPE SLIDES AS YOU SEE FIT! 
+
+## FITTING PLOTS ON THE SLIDES IS A BIT OF A NIGHTMARE. I TRIED TO SET ALL SLIDES TO BE THE SAME
+## (SEE THE YAML ABOVE) BUT IT MAY NOT WORK FOR YOUR PLOT, JUST FYI.
+## - LEAH 
+
+## Group 3: Presentation Overview
+
+#Roughly 2 Minutes per Person
+#Jeff can control PPT, all in same space?
+#Presentation Format
+
+#Whoever does the data overview, make sure they know what the goal/overarching attempt of our plots are
+
+# - Data Overview
+#   1. yelp.com/dataset - businesses, reviews, and user data
+#   2. US Counties Health Data - CDC.com 
+# - Initial Data Exploration:
+#   - Top Cuisines per Metro Area 
+#   - Sentiment Analysis of Reviews 
+# - "Killer Plot" Comparing Restaurants and Heatlh Data
+# 
+# ## Data Overview
+```
+
+## Group 3: Presentation Overview
+
+- Data Overview
+- Data Exploration
+  - Sentiment Analysis of Yelp Reviews
+  - Top Cuisines per Metro Area 
+  - Examining the Effect of COVID-19 on Yelp 
+  - Heatmaps of Food Categories
+- "Killer Plot": Comparing Restaurants and Health Data
+
+## Data Overview
+
+- yelp.com/dataset
+  - Primary Dataset
+  - 8.6M Reviews, 2.3M Users, 160k Businesses, and 8 Metro Areas
+  - Composed of 5 Different Datasets: Business, Check-in, Tip, User, Review
+  - 2004 - 2021
+- CDC Health Data
+  - Secondary Dataset
+  - Split up by 32,400 Zip Codes
+  - Contains Crude Prevalence (%) and 95% CI for roughly 50 health statistics in every US county
+
+## Analyzing Review Data
+
+```{r, out.width='90%',out.height='90%'}
+knitr::include_graphics('/Users/gazifuad/Desktop/STAT 405/col_plot.png')
+```
+
+## Analyzing Review Data
+
+```{r, out.width='90%',out.height='90%'}
+knitr::include_graphics('/Users/gazifuad/Desktop/STAT 405/Sentiment Analysis Graph.png')
+```
+  
+## Data Exploration: Top Cuisines
+
+```{r cuisines, echo = FALSE, fig.width=7.5, fig.height=4.8}
+
+library(RSQLite)
+db <- "SQL Project Database (1).db" #insert your own here
+dcon <- dbConnect(SQLite(), dbname = db)
+
+##
+# BOULDER AND METRO AREA - MOST POPULAR RESTAURANT CUISINES 
+##
+
+res <- dbSendQuery(conn = dcon, "
+SELECT name, city, state, categories
+FROM business
+WHERE state = 'CO';
+")
+mydf_boulder <- dbFetch(res, -1)
+dbClearResult(res)
+
+mydf_boulder_restaurants <- mydf_boulder %>% 
+  filter(str_detect(categories, 'Restaurants|Food')) %>% 
+  mutate(categories = strsplit(as.character(categories), ", ")) %>% 
+  unnest(categories) %>% 
+  filter(!str_detect('Jewelry|Mailbox Centers|Weight Loss Centers|Skin Care|
+                     Cardiologists|Psychologists|General Dentistry|
+                     Pet Services|Party Supplies|Doctors|Cosmetic Dentists|
+                     Periodontists|Dentists|Orthodontists|Education|
+                     Accessories|Day Spas|Financial Services|
+                     Banks & Credit Unions|Notaries|Shipping Centers|
+                     Electronics Repair|Souvenir Shops|Home & Garden|
+                     Home Decor|Convenience Stores|Lounges|Fashion|
+                     Department Stores|Venues & Event Spaces|
+                     Hotels|Food Delivery Services|Pharmacy|Cosmetics & Beauty Supply|
+                     Active Life|Event Planning & Services|Music Venues|
+                     Drugstores|Electronics|Arts & Entertainment|Home Services|
+                     Music & Video|Leather Goods|Gas Stations|Party & Event Planning|
+                     Pets|Life Coach|CSA|Pool Halls|Wedding Planning|
+                     Metal Fabricators|Karaoke|Massage|Festivals|Florists|
+                     Tobacco Shops|Local Services|Bikes|Mags|Real Estate Services|
+                     Brewing Supplies|Shopping Centers|Dance Clubs|Propane|Water Stores|
+                     Performing Arts|Shoe Stores|Outdoor Gear|Books|Real Estate|
+                     Professional Services|Pet Stores|Flea Markets|Arts & Crafts|
+                     Automotive|Flowers & Gifts|Sports Wear|Sporting Goods|Bookstores|
+                     Hotels & Travel|Bus Tours|Cards & Stationary|Hiking|Bike Rentals|
+                     Motorcycle Repair|Jazz & Blues|Motorcycle Dealers|Motorcycle Rental|
+                     Parks|Food Tours|Comedy Club|Discount Store|Historical Tours|
+                     Car Wash|Tours|Photography Stores & Services|Nutritionists|
+                     Public Services & Government|Scooter Tours|Counseling & Mental Health|
+                     Printing Services|Colleges & Universities|Post Offices|Wholesalers|
+                     Herbal Shops|International Grocery|Cards|Kitchen & Bath|Cards & Stationery|
+                     Herbs & Spices|Nightlife|Caterers|Organic Stores|Beauty & Spas|
+                     Health & Medical|Cosmetics & Beauty Supply|Vitamins & Supplements|
+                     Furniture Stores|Comedy Clubs|Gift Shops|Internet Cafes|Imported Food|
+                     Restaurant Supplies|Couriers & Delivery Services|Personal Chefs|
+                     Landmarks & Historical Buildings|Restaurants', categories))
+
+restaurant_type_list <- unique(mydf_boulder_restaurants$categories)
+
+boulder_df <- as.data.frame(table(mydf_boulder_restaurants$categories)) 
+sorted_boulder <- as.data.frame(head(boulder_df[order(-boulder_df$Freq),],n=5)) 
+
+
+boulder <- ggplot(data=sorted_boulder) + aes(x=reorder(Var1,-Freq), y=Freq, fill=Var1) +
+  geom_bar(stat="identity") + 
+  scale_fill_manual(values=c("darkblue","grey20", 
+                             "orange", "brown", 
+                             "cornsilk")) +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 20, hjust = 1),
+        legend.position = "none",axis.title.x=element_blank()) +
+  labs(title = "Top 5 Cuisines in \nBoulder & Metro Area",
+       y = "Count")
+
+##
+# ORLANDO AND METRO AREA - MOST POPULAR RESTAURANT CUISINES
+##
+
+res1 <- dbSendQuery(conn = dcon, "
+SELECT name, city, categories, state
+FROM business
+WHERE state = 'FL';
+")
+mydf_orlando <- dbFetch(res1, -1)
+dbClearResult(res1)
+
+mydf_orlando_restaurants <- mydf_orlando %>% 
+  filter(str_detect(categories, 'Restaurants|Food')) %>% 
+  mutate(categories = strsplit(as.character(categories), ", ")) %>% 
+  unnest(categories) %>% 
+  filter(!str_detect('Jewelry|Mailbox Centers|Weight Loss Centers|Skin Care|
+                     Cardiologists|Psychologists|General Dentistry|
+                     Pet Services|Party Supplies|Doctors|Cosmetic Dentists|
+                     Periodontists|Dentists|Orthodontists|Education|
+                     Accessories|Day Spas|Financial Services|
+                     Banks & Credit Unions|Notaries|Shipping Centers|
+                     Electronics Repair|Souvenir Shops|Home & Garden|
+                     Home Decor|Convenience Stores|Lounges|Fashion|
+                     Department Stores|Venues & Event Spaces|
+                     Hotels|Food Delivery Services|Pharmacy|Cosmetics & Beauty Supply|
+                     Active Life|Event Planning & Services|Music Venues|
+                     Drugstores|Electronics|Arts & Entertainment|Home Services|
+                     Music & Video|Leather Goods|Gas Stations|Party & Event Planning|
+                     Pets|Life Coach|CSA|Pool Halls|Wedding Planning|
+                     Metal Fabricators|Karaoke|Massage|Festivals|Florists|
+                     Tobacco Shops|Local Services|Bikes|Mags|Real Estate Services|
+                     Brewing Supplies|Shopping Centers|Dance Clubs|Propane|Water Stores|
+                     Performing Arts|Shoe Stores|Outdoor Gear|Books|Real Estate|
+                     Professional Services|Pet Stores|Flea Markets|Arts & Crafts|
+                     Automotive|Flowers & Gifts|Sports Wear|Sporting Goods|Bookstores|
+                     Hotels & Travel|Bus Tours|Cards & Stationary|Hiking|Bike Rentals|
+                     Motorcycle Repair|Jazz & Blues|Motorcycle Dealers|Motorcycle Rental|
+                     Parks|Food Tours|Comedy Club|Discount Store|Historical Tours|
+                     Car Wash|Tours|Photography Stores & Services|Nutritionists|
+                     Public Services & Government|Scooter Tours|Counseling & Mental Health|
+                     Printing Services|Colleges & Universities|Post Offices|Wholesalers|
+                     Herbal Shops|International Grocery|Cards|Kitchen & Bath|Cards & Stationery|
+                     Herbs & Spices|Nightlife|Caterers|Organic Stores|Beauty & Spas|
+                     Health & Medical|Cosmetics & Beauty Supply|Vitamins & Supplements|
+                     Furniture Stores|Comedy Clubs|Gift Shops|Internet Cafes|Imported Food|
+                     Restaurant Supplies|Couriers & Delivery Services|Personal Chefs|
+                     Landmarks & Historical Buildings|Restaurants', categories))
+
+restaurant_type_list <- unique(mydf_orlando_restaurants$categories)
+
+orlando_df <- as.data.frame(table(mydf_orlando_restaurants$categories)) 
+sorted_orlando <- as.data.frame(head(orlando_df[order(-orlando_df$Freq),],n=5)) 
+
+orlando <- ggplot(data=sorted_orlando) + aes(x=reorder(Var1,-Freq), y=Freq, fill=Var1) +
+  geom_bar(stat="identity") + 
+  scale_fill_manual(values=c("darkblue","red","grey20",
+                             "yellow","cornsilk")) +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 20, hjust = 1),
+        legend.position = "none",axis.title.x=element_blank()) +
+  labs(title = "Top 5 Cuisines in \nOrlando & Metro Area",
+       y = "Count")
+
+##
+# ATLANTA AND METRO AREA - MOST POPULAR RESTAURANT CUISINES
+##
+
+res2 <- dbSendQuery(conn = dcon, "
+SELECT name, city, categories, state
+FROM business
+WHERE state = 'GA';
+")
+mydf_atlanta <- dbFetch(res2, -1)
+dbClearResult(res2)
+
+mydf_atlanta_restaurants <- mydf_atlanta %>% 
+  filter(str_detect(categories, 'Restaurants|Food')) %>% 
+  mutate(categories = strsplit(as.character(categories), ", ")) %>% 
+  unnest(categories) %>% 
+  filter(!str_detect('Jewelry|Mailbox Centers|Weight Loss Centers|Skin Care|
+                     Cardiologists|Psychologists|General Dentistry|
+                     Pet Services|Party Supplies|Doctors|Cosmetic Dentists|
+                     Periodontists|Dentists|Orthodontists|Education|
+                     Accessories|Day Spas|Financial Services|
+                     Banks & Credit Unions|Notaries|Shipping Centers|
+                     Electronics Repair|Souvenir Shops|Home & Garden|
+                     Home Decor|Convenience Stores|Lounges|Fashion|
+                     Department Stores|Venues & Event Spaces|
+                     Hotels|Food Delivery Services|Pharmacy|Cosmetics & Beauty Supply|
+                     Active Life|Event Planning & Services|Music Venues|
+                     Drugstores|Electronics|Arts & Entertainment|Home Services|
+                     Music & Video|Leather Goods|Gas Stations|Party & Event Planning|
+                     Pets|Life Coach|CSA|Pool Halls|Wedding Planning|
+                     Metal Fabricators|Karaoke|Massage|Festivals|Florists|
+                     Tobacco Shops|Local Services|Bikes|Mags|Real Estate Services|
+                     Brewing Supplies|Shopping Centers|Dance Clubs|Propane|Water Stores|
+                     Performing Arts|Shoe Stores|Outdoor Gear|Books|Real Estate|
+                     Professional Services|Pet Stores|Flea Markets|Arts & Crafts|
+                     Automotive|Flowers & Gifts|Sports Wear|Sporting Goods|Bookstores|
+                     Hotels & Travel|Bus Tours|Cards & Stationary|Hiking|Bike Rentals|
+                     Motorcycle Repair|Jazz & Blues|Motorcycle Dealers|Motorcycle Rental|
+                     Parks|Food Tours|Comedy Club|Discount Store|Historical Tours|
+                     Car Wash|Tours|Photography Stores & Services|Nutritionists|
+                     Public Services & Government|Scooter Tours|Counseling & Mental Health|
+                     Printing Services|Colleges & Universities|Post Offices|Wholesalers|
+                     Herbal Shops|International Grocery|Cards|Kitchen & Bath|Cards & Stationery|
+                     Herbs & Spices|Nightlife|Caterers|Organic Stores|Beauty & Spas|
+                     Health & Medical|Cosmetics & Beauty Supply|Vitamins & Supplements|
+                     Furniture Stores|Comedy Clubs|Gift Shops|Internet Cafes|Imported Food|
+                     Restaurant Supplies|Couriers & Delivery Services|Personal Chefs|
+                     Landmarks & Historical Buildings|Restaurants', categories))
+
+restaurant_type_list <- unique(mydf_atlanta_restaurants$categories)
+
+atlanta_df <- as.data.frame(table(mydf_atlanta_restaurants$categories)) 
+sorted_atlanta <- as.data.frame(head(atlanta_df[order(-atlanta_df$Freq),],n=5)) 
+
+atlanta <- ggplot(data=sorted_atlanta) + aes(x=reorder(Var1,-Freq), y=Freq, fill=Var1) +
+  geom_bar(stat="identity") + 
+  scale_fill_manual(values=c("darkblue","red","grey20", 
+                             "yellow", "cornsilk")) +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 20, hjust = 1),
+        legend.position = "none",axis.title.x=element_blank()) +
+  labs(title = "Top 5 Cuisines in \nAtlanta & Metro Area",
+       y = "Count")
+
+##
+# BOSTON AND METRO AREA - MOST POPULAR RESTAURANT CUISINES
+##
+
+res3 <- dbSendQuery(conn = dcon, "
+SELECT name, city, categories, state
+FROM business
+WHERE state = 'MA';
+")
+mydf_boston <- dbFetch(res3, -1)
+dbClearResult(res3)
+
+mydf_boston_restaurants <- mydf_boston %>% 
+  filter(str_detect(categories, 'Restaurants|Food')) %>% 
+  mutate(categories = strsplit(as.character(categories), ", ")) %>% 
+  unnest(categories) %>% 
+  filter(!str_detect('Jewelry|Mailbox Centers|Weight Loss Centers|Skin Care|
+                     Cardiologists|Psychologists|General Dentistry|
+                     Pet Services|Party Supplies|Doctors|Cosmetic Dentists|
+                     Periodontists|Dentists|Orthodontists|Education|
+                     Accessories|Day Spas|Financial Services|
+                     Banks & Credit Unions|Notaries|Shipping Centers|
+                     Electronics Repair|Souvenir Shops|Home & Garden|
+                     Home Decor|Convenience Stores|Lounges|Fashion|
+                     Department Stores|Venues & Event Spaces|
+                     Hotels|Food Delivery Services|Pharmacy|Cosmetics & Beauty Supply|
+                     Active Life|Event Planning & Services|Music Venues|
+                     Drugstores|Electronics|Arts & Entertainment|Home Services|
+                     Music & Video|Leather Goods|Gas Stations|Party & Event Planning|
+                     Pets|Life Coach|CSA|Pool Halls|Wedding Planning|
+                     Metal Fabricators|Karaoke|Massage|Festivals|Florists|
+                     Tobacco Shops|Local Services|Bikes|Mags|Real Estate Services|
+                     Brewing Supplies|Shopping Centers|Dance Clubs|Propane|Water Stores|
+                     Performing Arts|Shoe Stores|Outdoor Gear|Books|Real Estate|
+                     Professional Services|Pet Stores|Flea Markets|Arts & Crafts|
+                     Automotive|Flowers & Gifts|Sports Wear|Sporting Goods|Bookstores|
+                     Hotels & Travel|Bus Tours|Cards & Stationary|Hiking|Bike Rentals|
+                     Motorcycle Repair|Jazz & Blues|Motorcycle Dealers|Motorcycle Rental|
+                     Parks|Food Tours|Comedy Club|Discount Store|Historical Tours|
+                     Car Wash|Tours|Photography Stores & Services|Nutritionists|
+                     Public Services & Government|Scooter Tours|Counseling & Mental Health|
+                     Printing Services|Colleges & Universities|Post Offices|Wholesalers|
+                     Herbal Shops|International Grocery|Cards|Kitchen & Bath|Cards & Stationery|
+                     Herbs & Spices|Nightlife|Caterers|Organic Stores|Beauty & Spas|
+                     Health & Medical|Cosmetics & Beauty Supply|Vitamins & Supplements|
+                     Furniture Stores|Comedy Clubs|Gift Shops|Internet Cafes|Imported Food|
+                     Restaurant Supplies|Couriers & Delivery Services|Personal Chefs|
+                     Landmarks & Historical Buildings|Restaurants', categories))
+
+restaurant_type_list <- unique(mydf_boston_restaurants$categories)
+
+boston_df <- as.data.frame(table(mydf_boston_restaurants$categories)) 
+sorted_boston <- as.data.frame(head(boston_df[order(-boston_df$Freq),],n=5)) 
+
+boston <- ggplot(data=sorted_boston) + aes(x=reorder(Var1,-Freq), y=Freq, fill=Var1) +
+  geom_bar(stat="identity") + 
+  scale_fill_manual(values=c("red","grey20", "brown", 
+                             "darkred", "cornsilk")) +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 20, hjust = 1),
+        legend.position = "none",axis.title.x=element_blank()) +
+  labs(title = "Top 5 Cuisines in \nBoston & Metro Area",
+       y = "Count")
+
+##
+# COLUMBUS AND METRO AREA - MOST POPULAR RESTAURANT CUISINES
+##
+
+res4 <- dbSendQuery(conn = dcon, "
+SELECT name, city, categories, state
+FROM business
+WHERE state = 'OH';
+")
+mydf_columbus <- dbFetch(res4, -1)
+dbClearResult(res4)
+
+mydf_columbus_restaurants <- mydf_columbus %>% 
+  filter(str_detect(categories, 'Restaurants|Food')) %>% 
+  mutate(categories = strsplit(as.character(categories), ", ")) %>% 
+  unnest(categories) %>% 
+  filter(!str_detect('Jewelry|Mailbox Centers|Weight Loss Centers|Skin Care|
+                     Cardiologists|Psychologists|General Dentistry|
+                     Pet Services|Party Supplies|Doctors|Cosmetic Dentists|
+                     Periodontists|Dentists|Orthodontists|Education|
+                     Accessories|Day Spas|Financial Services|
+                     Banks & Credit Unions|Notaries|Shipping Centers|
+                     Electronics Repair|Souvenir Shops|Home & Garden|
+                     Home Decor|Convenience Stores|Lounges|Fashion|
+                     Department Stores|Venues & Event Spaces|
+                     Hotels|Food Delivery Services|Pharmacy|Cosmetics & Beauty Supply|
+                     Active Life|Event Planning & Services|Music Venues|
+                     Drugstores|Electronics|Arts & Entertainment|Home Services|
+                     Music & Video|Leather Goods|Gas Stations|Party & Event Planning|
+                     Pets|Life Coach|CSA|Pool Halls|Wedding Planning|
+                     Metal Fabricators|Karaoke|Massage|Festivals|Florists|
+                     Tobacco Shops|Local Services|Bikes|Mags|Real Estate Services|
+                     Brewing Supplies|Shopping Centers|Dance Clubs|Propane|Water Stores|
+                     Performing Arts|Shoe Stores|Outdoor Gear|Books|Real Estate|
+                     Professional Services|Pet Stores|Flea Markets|Arts & Crafts|
+                     Automotive|Flowers & Gifts|Sports Wear|Sporting Goods|Bookstores|
+                     Hotels & Travel|Bus Tours|Cards & Stationary|Hiking|Bike Rentals|
+                     Motorcycle Repair|Jazz & Blues|Motorcycle Dealers|Motorcycle Rental|
+                     Parks|Food Tours|Comedy Club|Discount Store|Historical Tours|
+                     Car Wash|Tours|Photography Stores & Services|Nutritionists|
+                     Public Services & Government|Scooter Tours|Counseling & Mental Health|
+                     Printing Services|Colleges & Universities|Post Offices|Wholesalers|
+                     Herbal Shops|International Grocery|Cards|Kitchen & Bath|Cards & Stationery|
+                     Herbs & Spices|Nightlife|Caterers|Organic Stores|Beauty & Spas|
+                     Health & Medical|Cosmetics & Beauty Supply|Vitamins & Supplements|
+                     Furniture Stores|Comedy Clubs|Gift Shops|Internet Cafes|Imported Food|
+                     Restaurant Supplies|Couriers & Delivery Services|Personal Chefs|
+                     Landmarks & Historical Buildings|Restaurants', categories))
+
+restaurant_type_list <- unique(mydf_columbus_restaurants$categories)
+
+columbus_df <- as.data.frame(table(mydf_columbus_restaurants$categories)) 
+sorted_columbus <- as.data.frame(head(columbus_df[order(-columbus_df$Freq),],n=5)) 
+
+columbus <- ggplot(data=sorted_columbus) + aes(x=reorder(Var1,-Freq), y=Freq, fill=Var1) +
+  geom_bar(stat="identity") + 
+  scale_fill_manual(values=c("red","grey20",
+                             "yellow","darkred","cornsilk")) +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 20, hjust = 1),
+        legend.position = "none",axis.title.x=element_blank()) +
+  labs(title = "Top 5 Cuisines in \nColumbus & Metro Area",
+       y = "Count")
+
+##
+# PORTLAND AND METRO AREA - MOST POPULAR RESTAURANT CUISINES
+##
+
+res5 <- dbSendQuery(conn = dcon, "
+SELECT name, city, categories, state
+FROM business
+WHERE state = 'OR';
+")
+mydf_portland <- dbFetch(res5, -1)
+dbClearResult(res5)
+
+mydf_portland_restaurants <- mydf_portland %>% 
+  filter(str_detect(categories, 'Restaurants|Food')) %>% 
+  mutate(categories = strsplit(as.character(categories), ", ")) %>% 
+  unnest(categories) %>% 
+  filter(!str_detect('Jewelry|Mailbox Centers|Weight Loss Centers|Skin Care|
+                     Cardiologists|Psychologists|General Dentistry|
+                     Pet Services|Party Supplies|Doctors|Cosmetic Dentists|
+                     Periodontists|Dentists|Orthodontists|Education|
+                     Accessories|Day Spas|Financial Services|
+                     Banks & Credit Unions|Notaries|Shipping Centers|
+                     Electronics Repair|Souvenir Shops|Home & Garden|
+                     Home Decor|Convenience Stores|Lounges|Fashion|
+                     Department Stores|Venues & Event Spaces|
+                     Hotels|Food Delivery Services|Pharmacy|Cosmetics & Beauty Supply|
+                     Active Life|Event Planning & Services|Music Venues|
+                     Drugstores|Electronics|Arts & Entertainment|Home Services|
+                     Music & Video|Leather Goods|Gas Stations|Party & Event Planning|
+                     Pets|Life Coach|CSA|Pool Halls|Wedding Planning|
+                     Metal Fabricators|Karaoke|Massage|Festivals|Florists|
+                     Tobacco Shops|Local Services|Bikes|Mags|Real Estate Services|
+                     Brewing Supplies|Shopping Centers|Dance Clubs|Propane|Water Stores|
+                     Performing Arts|Shoe Stores|Outdoor Gear|Books|Real Estate|
+                     Professional Services|Pet Stores|Flea Markets|Arts & Crafts|
+                     Automotive|Flowers & Gifts|Sports Wear|Sporting Goods|Bookstores|
+                     Hotels & Travel|Bus Tours|Cards & Stationary|Hiking|Bike Rentals|
+                     Motorcycle Repair|Jazz & Blues|Motorcycle Dealers|Motorcycle Rental|
+                     Parks|Food Tours|Comedy Club|Discount Store|Historical Tours|
+                     Car Wash|Tours|Photography Stores & Services|Nutritionists|
+                     Public Services & Government|Scooter Tours|Counseling & Mental Health|
+                     Printing Services|Colleges & Universities|Post Offices|Wholesalers|
+                     Herbal Shops|International Grocery|Cards|Kitchen & Bath|Cards & Stationery|
+                     Herbs & Spices|Nightlife|Caterers|Organic Stores|Beauty & Spas|
+                     Health & Medical|Cosmetics & Beauty Supply|Vitamins & Supplements|
+                     Furniture Stores|Comedy Clubs|Gift Shops|Internet Cafes|Imported Food|
+                     Restaurant Supplies|Couriers & Delivery Services|Personal Chefs|
+                     Landmarks & Historical Buildings|Restaurants|Food Stands|Beer|Wine & Spirits', categories))
+
+restaurant_type_list <- unique(mydf_portland_restaurants$categories)
+
+portland_df <- as.data.frame(table(mydf_portland_restaurants$categories)) 
+sorted_portland <- as.data.frame(head(portland_df[order(-portland_df$Freq),],n=5)) 
+
+portland <- ggplot(data=sorted_portland) + aes(x=reorder(Var1,-Freq), y=Freq, fill=Var1) +
+  geom_bar(stat="identity") + 
+  scale_fill_manual(values=c("red","grey20", 
+                             "brown", "purple4", 
+                             "cornsilk")) +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 20, hjust = 1),
+        legend.position = "none",axis.title.x=element_blank()) +
+  labs(title = "Top 5 Cuisines in \nPortland & Metro Area",
+       y = "Count")
+
+##
+# AUSTIN AND METRO AREA - MOST POPULAR RESTAURANT CUISINES
+##
+
+res6 <- dbSendQuery(conn = dcon, "
+SELECT name, city, categories, state
+FROM business
+WHERE state = 'TX';
+")
+mydf_austin <- dbFetch(res6, -1)
+dbClearResult(res6)
+
+mydf_austin_restaurants <- mydf_austin %>% 
+  filter(str_detect(categories, 'Restaurants|Food')) %>% 
+  mutate(categories = strsplit(as.character(categories), ", ")) %>% 
+  unnest(categories) %>% 
+  filter(!str_detect('Jewelry|Mailbox Centers|Weight Loss Centers|Skin Care|
+                     Cardiologists|Psychologists|General Dentistry|
+                     Pet Services|Party Supplies|Doctors|Cosmetic Dentists|
+                     Periodontists|Dentists|Orthodontists|Education|
+                     Accessories|Day Spas|Financial Services|
+                     Banks & Credit Unions|Notaries|Shipping Centers|
+                     Electronics Repair|Souvenir Shops|Home & Garden|
+                     Home Decor|Convenience Stores|Lounges|Fashion|
+                     Department Stores|Venues & Event Spaces|
+                     Hotels|Food Delivery Services|Pharmacy|Cosmetics & Beauty Supply|
+                     Active Life|Event Planning & Services|Music Venues|
+                     Drugstores|Electronics|Arts & Entertainment|Home Services|
+                     Music & Video|Leather Goods|Gas Stations|Party & Event Planning|
+                     Pets|Life Coach|CSA|Pool Halls|Wedding Planning|
+                     Metal Fabricators|Karaoke|Massage|Festivals|Florists|
+                     Tobacco Shops|Local Services|Bikes|Mags|Real Estate Services|
+                     Brewing Supplies|Shopping Centers|Dance Clubs|Propane|Water Stores|
+                     Performing Arts|Shoe Stores|Outdoor Gear|Books|Real Estate|
+                     Professional Services|Pet Stores|Flea Markets|Arts & Crafts|
+                     Automotive|Flowers & Gifts|Sports Wear|Sporting Goods|Bookstores|
+                     Hotels & Travel|Bus Tours|Cards & Stationary|Hiking|Bike Rentals|
+                     Motorcycle Repair|Jazz & Blues|Motorcycle Dealers|Motorcycle Rental|
+                     Parks|Food Tours|Comedy Club|Discount Store|Historical Tours|
+                     Car Wash|Tours|Photography Stores & Services|Nutritionists|
+                     Public Services & Government|Scooter Tours|Counseling & Mental Health|
+                     Printing Services|Colleges & Universities|Post Offices|Wholesalers|
+                     Herbal Shops|International Grocery|Cards|Kitchen & Bath|Cards & Stationery|
+                     Herbs & Spices|Nightlife|Caterers|Organic Stores|Beauty & Spas|
+                     Health & Medical|Cosmetics & Beauty Supply|Vitamins & Supplements|
+                     Furniture Stores|Comedy Clubs|Gift Shops|Internet Cafes|Imported Food|
+                     Restaurant Supplies|Couriers & Delivery Services|Personal Chefs|
+                     Landmarks & Historical Buildings|Restaurants|Food Stands|Beer|Wine & Spirits', categories))
+
+restaurant_type_list <- unique(mydf_austin_restaurants$categories)
+
+austin_df <- as.data.frame(table(mydf_austin_restaurants$categories)) 
+sorted_austin <- as.data.frame(head(austin_df[order(-austin_df$Freq),],n=5)) 
+
+austin <- ggplot(data=sorted_austin) + aes(x=reorder(Var1,-Freq), y=Freq, fill=Var1) +
+  geom_bar(stat="identity") + 
+  scale_fill_manual(values=c("grey20","brown", 
+                             "purple4", "darkgreen","cornsilk")) +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 20, hjust = 1),
+        legend.position = "none",axis.title.x=element_blank()) +
+  labs(title = "Top 5 Cuisines in \nAustin & Metro Area",
+       y = "Count")
+
+##
+# COMBINED PLOTS - SINGLE PAGE
+## 
+
+ggpubr::ggarrange(atlanta, austin, boston, boulder, ncol = 2, nrow = 2)
+
+```
+
+
+## Data Exploration: Top Cuisines 
+
+```{r cuisines2, fig.width=7.5, fig.height=4.8}
+
+ggpubr::ggarrange(columbus, orlando, portland, ncol = 3, nrow = 1)
+
+```
+
+
+## Data Exploration: % Of Heath Concern Restaurants
+
+```{r fastfood}
+
+##
+# MORE DATA ANALYSIS 
+# PERCENT OF FAST FOOD RESTAURANTS AND BARS PER METRO AREA 
+# INTENT: IS THERE A CORRELATION BETWEEN FAST FOOD/BARS DENSITY AND HEALTH CONCERNS? 
+##
+
+# Boulder
+total_ff_boulder <- round((sum(str_detect(mydf_boulder_restaurants$categories,'Fast Food'))/nrow(mydf_boulder_restaurants))*100,2)
+total_bars_boulder <- round((sum(str_detect(mydf_boulder_restaurants$categories,'Bars'))/nrow(mydf_boulder_restaurants))*100,2)
+
+# Orlando
+total_ff_orlando <- round((sum(str_detect(mydf_orlando_restaurants$categories,'Fast Food'))/nrow(mydf_orlando_restaurants))*100,2)
+total_bars_orlando <- round((sum(str_detect(mydf_orlando_restaurants$categories,'Bars'))/nrow(mydf_orlando_restaurants))*100,2)
+
+# Atlanta
+total_ff_atlanta <- round((sum(str_detect(mydf_atlanta_restaurants$categories,'Fast Food'))/nrow(mydf_atlanta_restaurants))*100,2)
+total_bars_atlanta <- round((sum(str_detect(mydf_atlanta_restaurants$categories,'Bars'))/nrow(mydf_atlanta_restaurants))*100,2)
+
+
+# Boston
+total_ff_boston <- round((sum(str_detect(mydf_boston_restaurants$categories,'Fast Food'))/nrow(mydf_boston_restaurants))*100,2)
+total_bars_boston <- round((sum(str_detect(mydf_boston_restaurants$categories,'Bars'))/nrow(mydf_boston_restaurants))*100,2)
+
+
+# Columbus
+total_ff_columbus <- round((sum(str_detect(mydf_columbus_restaurants$categories,'Fast Food'))/nrow(mydf_columbus_restaurants))*100,2)
+total_bars_columbus <- round((sum(str_detect(mydf_columbus_restaurants$categories,'Bars'))/nrow(mydf_columbus_restaurants))*100,2)
+
+
+# Portland
+total_ff_portland <- round((sum(str_detect(mydf_portland_restaurants$categories,'Fast Food'))/nrow(mydf_portland_restaurants))*100,2)
+total_bars_portland <- round((sum(str_detect(mydf_portland_restaurants$categories,'Bars'))/nrow(mydf_portland_restaurants))*100,2)
+
+# Austin
+total_ff_austin <- round((sum(str_detect(mydf_austin_restaurants$categories,'Fast Food'))/nrow(mydf_austin_restaurants))*100,2)
+total_bars_austin <- round((sum(str_detect(mydf_austin_restaurants$categories,'Bars'))/nrow(mydf_austin_restaurants))*100,2)
+
+# TABLEs - ALL THE DATA 
+
+tab <- matrix(c(total_ff_atlanta, total_ff_austin, total_ff_boston, total_ff_boulder, total_ff_columbus, total_ff_orlando,total_ff_portland), ncol=7, byrow=TRUE)
+colnames(tab) <- c('Atlanta','Austin', 'Boston', 'Boulder', 'Columbus','Orlando', 'Portland')
+#rownames(tab) <- c('% \nFast \nFood')
+knitr::kable(tab, caption = "% of Fast Food Per Metro Area")
+
+tab <- matrix(c(total_bars_atlanta, total_bars_austin, total_bars_boston, total_bars_boulder, total_bars_columbus,
+                total_bars_orlando, total_bars_portland), ncol=7, byrow=TRUE)
+colnames(tab) <- c('Atlanta','Austin', 'Boston', 'Boulder', 'Columbus','Orlando', 'Portland')
+#rownames(tab) <- c('% \nBars')
+knitr::kable(tab, caption = "% of Bars Per Metro Area")
+
+
+dbDisconnect(dcon)
+
+```
+## Yelp During Covid
+- Yelp searches decreased as much as 90% in certain categories in April 2020, after COVID lockdowns started
+- As a result, the company laid off 2,100 employees and cut salaries of top executives
+
+## Time Series Analysis of Reviews
+
+``` {r time, echo = FALSE, warning = FALSE, message = FALSE, fig.width=7.5, fig.height=4.6}
+#db <- "/Users/Edward/Downloads/SQL Project Database (1).db" #insert your own here
+load("time_series_review_data.Rda")
+
+p6<-ggplot(summary_total, aes(x=order, y=count))+
+  geom_line()+
+  labs(title = "Number of Yelp Reviews Per Month\nJanuary 2004-January 2021", x="Months since January 2004", y="Number of Reviews")
+
+p6_anim<-p6+transition_reveal(order)
+animate(p6_anim, renderer=gifski_renderer())
+```
+
+## How COVID Affected Different Services
+
+```{r changes, echo = FALSE, warning = FALSE, message = FALSE, fig.width=7.5, fig.height=4.6}
+load("categories.rda")
+
+categories_subset <- subset(categories,(Freq.x >= 100 | Freq.y >= 100))
+categories_subset$change <- (categories_subset$Freq.y - categories_subset$Freq.x)/categories_subset$Freq.x
+
+## BIGGEST CATEGORIES
+categories_subset1 <- subset(categories,(Freq.x + Freq.y >= 5000))
+
+categories_subset1$change <- (categories_subset1$Freq.y - categories_subset1$Freq.x)/categories_subset1$Freq.x
+
+categories_subset1$categories_subset_pos_neg<-categories_subset1$change > 0
+categories_subset1$categories_subset_pos_neg<-as.factor(categories_subset1$categories_subset_pos_neg)
+
+plot1 <- ggplot(data=categories_subset1, aes(x = reorder(categories_pre, -change), y=change))+
+  geom_col(fill = "indianred2")+
+  labs(title="Most Reviews", y="Percent Change", x="Type of Service")+
+  coord_flip() 
+
+## SMALLEST DECREASES
+categories_subset2 <- subset(categories_subset,(categories_subset$change) > -.25)
+
+categories_subset2$categories_pre <- recode_factor(categories_subset2$categories_pre, "IT Services & Computer Repair" = "IT Services")
+
+categories_subset2$categories_subset_pos_neg<-categories_subset2$change > 0
+categories_subset2$categories_subset_pos_neg<-as.factor(categories_subset2$categories_subset_pos_neg)
+
+plot2 <- ggplot(data=categories_subset2, aes(x = reorder(categories_pre, -change), y=change))+
+  geom_col(aes(fill=categories_subset_pos_neg))+
+  labs(title="Smallest % Decreases", y="Percent Change", x="Type of Service")+
+  coord_flip() + 
+  scale_fill_manual(guide = FALSE, values=c("indianred2", "darkgreen"))
+
+## BIGGEST DECREASES
+categories_subset3 <- subset(categories_subset,(categories_subset$change) < -.72)
+
+categories_subset3$categories_subset_pos_neg<-categories_subset3$change > 0
+categories_subset3$categories_subset_pos_neg<-as.factor(categories_subset3$categories_subset_pos_neg)
+
+plot3 <- ggplot(data=categories_subset3, aes(x = reorder(categories_pre, -change), y=change))+
+  geom_col(fill = "indianred2")+
+  labs(title="Largest % Decreases", y="Percent Change", x="Type of Service")+
+  coord_flip()
+
+## BIGGEST CHANGES
+categories_subset4 <- subset(categories_subset,(categories_subset$Freq.x - categories_subset$Freq.y) > 3500)
+
+categories_subset4$change <- categories_subset4$Freq.y - categories_subset4$Freq.x
+
+plot4 <- ggplot(data=categories_subset4, aes(x = reorder(categories_pre, change), y=change))+
+  geom_col(fill = "indianred2")+
+  labs(title="Largest Change", y="Change in Reviews", x="Type of Service")+
+  coord_flip()
+
+ggpubr::ggarrange(plot1, plot4, plot2, plot3, ncol = 2, nrow = 2)
+```
+
+## Heatmap of Cities
+```{r heatmap}
+load("yelp_reviews_boul.rda")
+load("yelp_reviews_bos.rda")
+load("yelp_reviews_aus.rda")
+load("yelp_reviews_atl.rda")
+
+# Call this function with the city name and type of variable you want to make
+# heat map of
+heat_map <- function(city, heatmap_variable) {
+  if(city == 'Boston') {
+    yelp_review <- subset(yelp_reviews_bos, 
+                          latitude >= 42.31 & 
+                            latitude <= 42.392 &
+                            longitude >= -71.12 & 
+                            longitude <= -70.99)
+  }
+  
+  if(city == 'Boulder') {
+    yelp_review <- subset(yelp_reviews_boul, 
+                          latitude >= 39.98 & 
+                            latitude <= 40.05 &
+                            longitude >= -105.3 & 
+                            longitude <= -105.22)
+  }
+  
+  
+  if(city == 'Austin') {
+    yelp_review <- subset(yelp_reviews_aus, 
+                          latitude >= 30.15 & 
+                            latitude <= 30.5 &
+                            longitude >= -97.95 & 
+                            longitude <= -97.55)
+  }
+  
+  if(city == 'Atlanta') {
+    yelp_review <- yelp_reviews_atl
+  }
+  
+  if(heatmap_variable != 'Total') {
+    yelp_review <- yelp_review %>% 
+      filter(str_detect(categories, heatmap_variable))
+  }
+  
+  qmplot(longitude, latitude, data = yelp_review,
+         maptype = 'terrain', geom='density2d', color = I('red'))
+}
+
+cities = c('Austin', 'Boston', 'Boulder')
+variable_types = c('Total', 'American (New)', 'American (Traditional)',
+                   'Mexican', 'Fast Food', 'Pizza', 'Bars', 'Sandwiches', 
+                   'Japanese', 'Thai', 'Chinese', 'Greek', 'Middle Eastern',
+                   'Indian', 'Italian', 'Halal', 'Nightlife')
+
+
+server <- function(input, output, session) {
+  
+  
+  
+  output$viewPlot <- renderPlot({
+    heat_map(input$city,input$variable)
+    
+  })
+  
+}
+
+ui <- fluidPage(
+  theme = shinytheme("journal"),
+  h1("Food Heatmaps Across Cities",align="center"), # put in whatever title you want here
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("variable", "Please Select Variable",
+                  choices = c('Total', 'American (New)', 'American (Traditional)',
+                              'Mexican', 'Fast Food', 'Pizza', 'Bars', 'Sandwiches', 
+                              'Japanese', 'Thai', 'Chinese', 'Greek', 'Middle Eastern',
+                              'Indian', 'Italian', 'Halal', 'Nightlife')),
+      selectInput("city","Please Select City",
+                  choices = c('Boulder', 'Austin', 'Boston', 'Atlanta', 'Columbus', 'Portland', 'Orlando'))),
+    mainPanel(
+      plotOutput("viewPlot",width="100%")
+    )),
+  setBackgroundColor(
+    color = "grey",
+    gradient = c("linear", "radial"),
+    direction = c("bottom", "top", "right", "left"),
+    shinydashboard = FALSE
+  )
+)
+
+
+shinyApp(ui,server)
+```
+
+## Killer Plot: A Dynamic Exploration of Data 
+
+```{r killer, echo = FALSE, warning = FALSE, message = FALSE, fig.show='asis', fig.width=7.5, fig.height=4.8, fig.align='center'}
+
+#Similarily step 2 changes stars from a continuous variable to a factor, allowing it be used more dynamicaly
+#No changing requires
+
+
+#Step 3: Create Health Data Frames
+
+#Step 3 creates three different data frames all with the same exact number of columns (see the summarize function), but with slightly different data
+#allbusi_state: data on all businesses grouped by state
+#allbusi_zip_zc: data on all businesses but grouped by zip code
+#allbar_zip_zc: data on all bars grouped by zip code
+#Note: all 3 ignore Washington, but can be added through a simple state == "WA" command in filter
+#In terms of columns
+  #state
+  #zipcode (if grouped by zip code)
+  #number of reviews
+  #average stars as a factor
+  #the mean of crude prevalence for a variety of health stats, see website below for documentation
+  #https://chronicdata.cdc.gov/500-Cities-Places/PLACES-ZCTA-Data-GIS-Friendly-Format-2020-release/kee5-23sr
+
+load("allbusi_states.rda")
+load("All Bars.rda")
+load("All Fast Food.rda")
+load("All Vegan.rda")
+load("All Pizza.rda")
+load("All American.rda")
+
+create_rest_df <- function(cuisine_type) {
+  if (cuisine_type == "Bar") {
+    all_rest_zip_zc <<- all_bars
+  }
+  
+  if (cuisine_type == "Fast Food") {
+    all_rest_zip_zc <<- all_ff
+  }
+  
+  if (cuisine_type == "Vegan") {
+    all_rest_zip_zc <<- all_vegan
+  }
+  
+  if (cuisine_type == "Pizza") {
+    all_rest_zip_zc <<- all_pizza
+  }
+  
+  if (cuisine_type == "America") {
+    all_rest_zip_zc <<- all_american
+  }
+}
+
+
+
+
+
+#Step 4: Heart Sizes
+#This function creates the relative size of hearts, matching an overall percentage to the heart size 
+#Also Note: this is just for
+heart_ranks <- function() {
+  hearts <- allbusi_state[,"heart"] #grab health statistic
+  states <- allbusi_state[,"state"] #grab states
+  heart_data <- cbind.data.frame(hearts, states)
+  heart_data <- heart_data %>%
+    arrange(desc(hearts)) #arrange health statistic from most to least
+  ranks <- c(7:1)
+  heart_rankings <- cbind.data.frame(heart_data, ranks)
+  heart_rankings
+  heart_sum <- sum(heart_rankings[1])
+  heart_pct <- heart_rankings[1] / heart_sum
+  heart_rankings <- cbind.data.frame(heart_rankings, heart_pct)
+  heart_pct_rel <- heart_rankings[4] / max(heart_rankings[4])
+  final_ranks <<- cbind.data.frame(heart_rankings, heart_pct_rel)
+}
+heart_ranks()
+
+#Step 5: Load USA Data Points
+load("US Data Points.Rda") #add ur own wd(), but this creates US data points
+
+
+#Step 6: Intializer Function creates initial set of data, and should remain unchanged throughout
+initializer <- function() {
+  grid.newpage() #Creates new page
+  vp0 <<- dataViewport(long_lat$longitude, long_lat$latitude) #US Map viewport #Note: << means store in global envior.
+  pushViewport(vp0) #pushes US map as viewport
+  city_x <<- c(-122.6784, -105.2705, -97.7431, -84.3880, -82.9988, -81.3789, -71.0589) #city latitudes
+  city_y <<- c(45.5152, 40.0150, 30.2672,33.7490, 39.9612, 28.5384, 42.3601) #city longitudes
+  vp_x <<- (city_x - min(vp0$xscale)) / (max(vp0$xscale) - min(vp0$xscale)) #starting points for latitude
+  vp_y <<- (city_y - min(vp0$yscale)) / (max(vp0$yscale) - min(vp0$yscale)) #starting points for longitude
+  x0 <<- c(.5, 1.67, .5, .5) #heart x's
+  y0 <<- c(.0, 1.1, 1.1, .9) #heart y's
+} 
+
+
+#Step 7: zip_code_data, grabbing the health statistics you want
+#The function assumes you want review counts for x-axis, then a secondary health statistic as y-axis
+zip_code_data <- function(health_stat, restaurant_type) {
+  restaurant_type %>% 
+    filter(state == "OR") %>% 
+    dplyr::select(`Review Count`, health_stat, `Average Stars`) ->> all_bar_port
+  x_port <<- all_bar_port$`Review Count`
+  y_port <<- all_bar_port[,health_stat]
+  
+  restaurant_type %>% 
+    filter(state == "CO") %>% 
+    dplyr::select(`Review Count`, health_stat, `Average Stars`) ->> all_bar_boul
+  x_boul <<- all_bar_boul$`Review Count`
+  y_boul <<- all_bar_boul[,health_stat]
+  
+  restaurant_type %>%
+    filter(state == "TX") %>%
+    dplyr::select(`Review Count`, health_stat, `Average Stars`) ->> all_bar_aust
+  x_aust <<- all_bar_aust$`Review Count`
+  y_aust <<- all_bar_aust[,health_stat]
+  
+  restaurant_type %>%
+    filter(state == "GA") %>%
+    dplyr::select(`Review Count`, health_stat, `Average Stars`) ->> all_bar_ATL
+  x_ATL <<- all_bar_ATL$`Review Count`
+  y_ATL <<- all_bar_ATL[,health_stat]
+  
+  restaurant_type %>%
+    filter(state == "OH") %>%
+    dplyr::select(`Review Count`, health_stat, `Average Stars`) ->> all_bar_colu
+  x_colu <<- all_bar_colu$`Review Count`
+  y_colu <<- all_bar_colu[,health_stat]
+  
+  restaurant_type %>%
+    filter(state == "FL") %>%
+    dplyr::select(`Review Count`, health_stat, `Average Stars`) ->> all_bar_FL
+  x_orl <<- all_bar_FL$`Review Count`
+  y_orl <<- all_bar_FL[,health_stat]
+  
+  restaurant_type %>%
+    filter(state == "MA") %>%
+    dplyr::select(`Review Count`, health_stat, `Average Stars`) ->> all_bar_BOS
+  x_BOS <<- all_bar_BOS$`Review Count`
+  y_BOS <<- all_bar_BOS[,health_stat]
+}
+
+#Step 8: Create Viewports
+#Would only need to change xscale and yscale for viewports 8-14, which gets complicated
+#For viewports 1-7: hearts
+#vp_x: where to center heart on x-axis, no change
+#vp_y: where to center heart on y-axis, no change
+#xscale: the min. and max. values of x based on longtitude values, do not change
+#yscale: the min. and max. values of y based on latitude values, do not change
+#height: value for heart height that varies based on values from earlier, no change
+#width: constant value for heart width, no change
+
+#for viewports 8-14: rectangles, axes, points, labels, everything else
+#vp_x: where to center chart on x-axis, no change
+#vp_y: where to center chart on y-axis, no change
+#xscale: the min. and max. values of x based on review counts, do not change since keeping xaxis same
+#yscale: the min. and max. values of y based on health stats, no change
+#height: value for heart height that varies based on values from earlier, no change
+#width: constant value for heart width, no change
+create_viewports <- function() {
+  
+  #Portland
+  vp1 <<- viewport(x = vp_x[1]+.02, y = vp_y[1], xscale = vp0$xscale, yscale = vp0$yscale, height = .3*(final_ranks[final_ranks$state == "OR",5]), width = .15) 
+  vp8 <<- viewport(x = vp_x[1]+.02, y = vp_y[1], xscale = c((min(x_port) - .1 * min(x_port)), (max(x_port) + .1 * max(x_port))), yscale = c((min(y_port[,1]) - .1 * min(y_port[,1])), (max(y_port[,1]) + .1 * max(y_port[,1]))),
+                   height = .3*(final_ranks[final_ranks$state == "OR",5]), width = .15) 
+  
+  #Boulder
+  vp2 <<- viewport(x = vp_x[2]+.025, y = vp_y[2], xscale = vp0$xscale, yscale = vp0$yscale, height = .3*(final_ranks[final_ranks$state == "CO",5]), width = .15)
+  vp9 <<- viewport(x = vp_x[2]+.025, y = vp_y[2], xscale = c((min(x_boul) - .1 * min(x_boul)), (max(x_boul) + .1 * max(x_boul))),
+                   yscale = c((min(y_boul[,1]) - .1 * min(y_boul[,1])), (max(y_boul[,1]) + .1 * max(y_boul[,1]))), height = .3*(final_ranks[final_ranks$state == "CO",5]), width = .15) 
+  
+  #Austin
+  vp3 <<- viewport(x = vp_x[3]-.05, y = vp_y[3], xscale = vp0$xscale, yscale = vp0$yscale, height = .3*(final_ranks[final_ranks$state == "TX",5]), width = .15)
+  vp10 <<- viewport(x = vp_x[3]-.05, y = vp_y[3], xscale = c((min(x_aust) - .1 * min(x_aust)), (max(x_aust) + .1 * max(x_aust))),
+                    yscale = c((min(y_aust[,1]) - .1 * min(y_aust[,1])), (max(y_aust[,1]) + .1 * max(y_aust[,1]))), height = .3*(final_ranks[final_ranks$state == "TX",5]), width = .15)
+  
+  #Atlanta
+  vp4 <<- viewport(x = vp_x[4]-.05, y = vp_y[4], xscale = vp0$xscale, yscale = vp0$yscale, height = .3*(final_ranks[final_ranks$state == "GA",5]), width = .15)
+  vp11 <<- viewport(x = vp_x[4]-.05, y = vp_y[4], xscale = c((min(x_ATL) - .1 * min(x_ATL)), (max(x_ATL) + .1 * max(x_ATL))),
+                    yscale = c((min(y_ATL[,1]) - .1 * min(y_ATL[,1])), (max(y_ATL[,1]) + .1 * max(y_ATL[,1]))), height = .3*(final_ranks[final_ranks$state == "GA",5]), width = .15)
+  
+  #Columbus
+  vp5 <<- viewport(x = vp_x[5]-.02, y = vp_y[5]+.02, xscale = vp0$xscale, yscale = vp0$yscale, height = .3*(final_ranks[final_ranks$state == "OH",5]), width = .15)
+  vp12 <<- viewport(x = vp_x[5]-.02, y = vp_y[5]+.02, xscale = c((min(x_colu) - .1 * min(x_colu)), (max(x_colu) + .1 * max(x_colu))),
+                    yscale = c((min(y_colu[,1]) - .1 * min(y_colu[,1])), (max(y_colu[,1]) + .1 * max(y_colu[,1]))), height = .3*(final_ranks[final_ranks$state == "OH",5]), width = .15)
+  
+  #Orlando
+  vp6 <<- viewport(x = vp_x[6]+.07, y = vp_y[6]+.07, xscale = vp0$xscale, yscale = vp0$yscale, height = .3*(final_ranks[final_ranks$state == "FL",5]), width = .15)
+  vp13 <<- viewport(x = vp_x[6]+.07, y = vp_y[6]+.07, xscale = c((min(x_orl) - .1 * min(x_orl)), (max(x_orl) + .1 * max(x_orl))),
+                    yscale = c((min(y_orl[,1]) - .1 * min(y_orl[,1])), (max(y_orl[,1]) + .1 * max(y_orl[,1]))), height = .3*(final_ranks[final_ranks$state == "FL",5]), width = .15)
+  
+  #Boston
+  vp7 <<- viewport(x = vp_x[7]+.01, y = vp_y[7], xscale = vp0$xscale, yscale = vp0$yscale, height = .3*(final_ranks[final_ranks$state == "MA",5]), width = .15)
+  vp14 <<- viewport(x = vp_x[7]+.01, y = vp_y[7], xscale = c((min(x_BOS) - .1 * min(x_BOS)), (max(x_BOS) + .1 * max(x_BOS))),
+                    yscale = c((min(y_BOS[,1]) - .1 * min(y_BOS[,1])), (max(y_BOS[,1]) + .1 * max(y_BOS[,1]))), height = .3*(final_ranks[final_ranks$state == "MA",5]), width = .15)
+}   #Here you can change heart size(heights) and scales to match data, right now only manually
+
+#Step 9: Create Rectangles
+#Creates boxes around viewport as well as the US map
+#Nothing in the function needs to be changed
+create_rectangles <- function() {
+  #creates box around each relevant viewport
+  grid.rect(vp = vp8)
+  grid.rect(vp = vp9)
+  grid.rect(vp = vp10)
+  grid.rect(vp = vp11)
+  grid.rect(vp = vp12)
+  grid.rect(vp = vp13)
+  grid.rect(vp = vp14)
+  grid.lines(long_lat$longitude, long_lat$latitude, gp = gpar(col="grey"), default.units = "native") #creates US map
+} 
+
+#Step 10: Generate Hearts
+heart <- function(x, y, viewporth, color) {
+  #Note: color is where you can change color of heart, likely must be done manually
+  x1 <- x
+  y1 <- y
+  x2 <- c(x[1], x[1] - (x[2] - x[1]), x[3], x[4])
+  y2 <- y
+  grid.bezier(x1, y1, vp = viewporth,
+              gp = gpar(col = as.character(color),
+                        lwd = 3))
+  grid.bezier(x2, y2, vp = viewporth,
+              gp = gpar(col = as.character(color),
+                        lwd = 3))
+} #Options: Heart Color
+
+generate_hearts <- function(logical_h) {
+  if (logical_h == TRUE) {
+  terrain_colors <- terrain.colors(7)
+  terrain_colors[7] <- "red"
+  terrain_colors <- rev(terrain_colors)
+  final_ranks <- cbind(final_ranks, terrain_colors)
+  heart(x0, y0, vp1, final_ranks[final_ranks$state == "OR",6]) #Portland
+  heart(x0, y0, vp2, final_ranks[final_ranks$state == "CO",6]) #Boulder
+  heart(x0, y0, vp3, final_ranks[final_ranks$state == "TX",6]) #Austin
+  heart(x0, y0, vp4, final_ranks[final_ranks$state == "GA",6]) #Atlanta 
+  heart(x0, y0, vp5, final_ranks[final_ranks$state == "OH",6]) #Columbus
+  heart(x0, y0, vp6, final_ranks[final_ranks$state == "FL",6]) #Orlando
+  heart(x0, y0, vp7, final_ranks[final_ranks$state == "MA",6]) #Boston
+  }
+  else {
+    NULL
+  }
+} 
+
+#Step 11: Generate Axes
+#Based off viewports in generate viewports, so nothing to change
+generate_axes <- function() {
+  grid.xaxis(vp = vp8)
+  grid.yaxis(vp = vp8, main = FALSE) #Portland
+  
+  grid.xaxis(vp = vp9)
+  grid.yaxis(vp = vp9) #Boulder
+  
+  grid.xaxis(vp = vp10)
+  grid.yaxis(vp = vp10) #Austin
+  
+  grid.xaxis(vp = vp11)
+  grid.yaxis(vp = vp11) #Atlanta
+  
+  grid.xaxis(vp = vp12, main = FALSE)
+  grid.yaxis(vp = vp12) #Columbus
+  
+  grid.xaxis(vp = vp13)
+  grid.yaxis(vp = vp13, main = F) #Orlando
+  
+  grid.xaxis(vp = vp14)
+  grid.yaxis(vp = vp14) #Boston
+  
+} #Same for all scatterplots, diff. for other types, would make sense to have indicator variable for type
+
+#Step 12: Generate Points
+#Nothing to change, have already accumulated everything from this
+generate_points <- function() {
+  
+  grid.points(x_port, as.list(y_port)[[1]], pch = 1, size = unit(0.04, "npc"),
+              gp = gpar(col = all_bar_port$`Average Stars`), vp = vp8)
+  
+  grid.points(x_boul, as.list(y_boul)[[1]], pch = 1, size = unit(0.04, "npc"),
+              gp = gpar(col = all_bar_boul$`Average Stars`), vp = vp9)
+  
+  grid.points(x_aust, as.list(y_aust)[[1]], pch = 1, size = unit(0.04, "npc"),
+              gp = gpar(col = all_bar_aust$`Average Stars`), vp = vp10)
+  
+  grid.points(x_ATL, as.list(y_ATL)[[1]], pch = 1, size = unit(0.04, "npc"),
+              gp = gpar(col = all_bar_ATL$`Average Stars`), vp = vp11)
+  
+  grid.points(x_colu, as.list(y_colu)[[1]], pch = 1, size = unit(0.04, "npc"),
+              gp = gpar(col = all_bar_colu$`Average Stars`), vp = vp12)
+  
+  grid.points(x_orl, as.list(y_orl)[[1]], pch = 1, size = unit(0.04, "npc"),
+              gp = gpar(col = all_bar_FL$`Average Stars`), vp = vp13)
+  
+  grid.points(x_BOS, as.list(y_BOS)[[1]], pch = 1, size = unit(0.04, "npc"),
+              gp = gpar(col = all_bar_BOS$`Average Stars`), vp = vp14)
+}
+
+#Step 13: Generate Labels
+#I can clean this up later as needed, but this generates labels
+generate_prez_labels_y <- function(health_stat) {
+
+  if(health_stat=="Binge Drinking"){
+  grid.text("     Y Axes: Crude Prevalance of Binge Drinking", x = unit(0.5, "npc"),
+            y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(health_stat=="High Blood Pressure"){
+    grid.text("     Y Axes: Crude Prevalance of High Blood Pressure", x = unit(0.5, "npc"),
+              y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(health_stat=="Stroke"){
+    grid.text("     Y Axes: Crude Prevalance of Stroke", x = unit(0.5, "npc"),
+              y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(health_stat=="Obesity"){
+    grid.text("     Y Axes: Crude Prevalance of Obesity", x = unit(0.5, "npc"),
+              y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(health_stat=="Any Cancer"){
+    grid.text("     Y Axes: Crude Prevalance of Cancer", x = unit(0.5, "npc"),
+              y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+    if(health_stat=="Mental Health Problems"){
+      grid.text("     Y Axes: Crude Prevalance of Length of Mental Health Issues", x = unit(0.5, "npc"),
+                y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+    }
+  
+  if(health_stat=="Arthritis"){
+    grid.text("     Y Axes: Crude Prevalance of Arthritis", x = unit(0.5, "npc"),
+              y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(health_stat=="Asthma"){
+    grid.text("     Y Axes: Crude Prevalance of Asthma", x = unit(0.5, "npc"),
+              y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(health_stat=="Coronary Heart Disease"){
+    grid.text("     Y Axes: Crude Prevalance of Coronary Heart Disease", x = unit(0.5, "npc"),
+              y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(health_stat=="Chronic Kidney Disease"){
+    grid.text("     Y Axes: Crude Prevalance of Chronic Kidney Disease", x = unit(0.5, "npc"),
+              y = unit(0.89, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+}
+
+generate_prez_labels_x <- function(cuisine) {
+
+  if(cuisine=="Bar"){
+  grid.text("X Axes: Number of Bar Reviews", x = unit(0.5, "npc"),
+            y = unit(.96, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(cuisine=="Fast Food"){
+    grid.text("X Axes: Number of Fast Food Reviews", x = unit(0.5, "npc"),
+              y = unit(0.96, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(cuisine=="Pizza"){
+    grid.text("X Axes: Number of Pizza Reviews", x = unit(0.5, "npc"),
+              y = unit(0.96, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(cuisine=="American"){
+    grid.text("X Axes: Number of American Reviews", x = unit(0.5, "npc"),
+              y = unit(0.96, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+  
+  if(cuisine=="Vegan"){
+    grid.text("X Axes: Number of Vegan Reviews", x = unit(0.5, "npc"),
+              y = unit(0.96, "npc"), gp = gpar(fontsize = 15), vp = vp0)
+  }
+}
+
+
+generate_city_names <- function(logical) {
+  if (logical == TRUE) {
+  grid.text("Portland", gp = gpar(fontsize = 15,
+                                  col = "darkblue",
+                                  fontface = "bold"), vp = vp8)
+  
+  grid.text("Boulder", gp = gpar(fontsize = 15,
+                                  col = "darkblue",
+                                  fontface = "bold"), vp = vp9)
+  
+  grid.text("Austin", gp = gpar(fontsize = 15,
+                                  col = "darkblue",
+                                  fontface = "bold"), vp = vp10)
+  
+  grid.text("Atlanta", gp = gpar(fontsize = 15,
+                                  col = "darkblue",
+                                  fontface = "bold"), vp = vp11)
+  
+  grid.text("Columbus", gp = gpar(fontsize = 15,
+                                  col = "darkblue",
+                                  fontface = "bold"), vp = vp12)
+  
+  grid.text("Orlando", gp = gpar(fontsize = 15,
+                                  col = "darkblue",
+                                  fontface = "bold"), vp = vp13)
+  
+  grid.text("Boston", gp = gpar(fontsize = 15,
+                                  col = "darkblue",
+                                  fontface = "bold"), vp = vp14)
+  }
+  else {
+    NULL
+  }
+}
+#No Longer Using Labels, will still use in our final report, no shiny required
+# generate_labels <-function(x_label, y_label) { 
+#   grid.text(as.character(y_label), x = unit(12, "lines"), rot = 270, vp = vp8) #y
+#   grid.text(as.character(x_label), y = unit(-2.5, "lines"), vp = vp8) #x
+#   
+#   
+#   grid.text(as.character(y_label), x = unit(-3, "lines"), rot = 90, vp = vp9) #y
+#   grid.text(as.character(x_label), y = unit(-2.5, "lines"), vp = vp9) #x
+#   
+#   grid.text(as.character(y_label), x = unit(-3, "lines"), rot = 90, vp = vp10) #y
+#   grid.text(as.character(x_label), y = unit(-2.5, "lines"), vp = vp10) #x
+#   
+#   
+#   grid.text(as.character(y_label), x = unit(-2.5, "lines"), rot = 90, vp = vp11) #y
+#   grid.text(as.character(x_label), y = unit(-2.5, "lines"), vp = vp11) #x
+#   
+#   
+#   grid.text(as.character(y_label), x = unit(-3, "lines"), rot = 90, vp = vp12) #y
+#   grid.text(as.character(x_label), y = unit(16, "lines"), vp = vp12) #x
+#   
+#   grid.text(as.character(y_label), x = unit(11, "lines"), rot = 270, vp = vp13) #y
+#   grid.text(as.character(x_label), y = unit(-2.1, "lines"), vp = vp13) #x
+#   
+#   
+#   grid.text(as.character(y_label), x = unit(-2.5, "lines"), rot = 90, vp = vp14) #y
+#   grid.text(as.character(x_label), y = unit(-2.5, "lines"), vp = vp14) #x
+# } #Same for all scatterplots, diff. for other types, would make sense to have indicator variable for type
+# generate_labels("Number of Bar Tips", "Binge Prevalence")
+
+
+
+server <- function(input, output, session) {
+  
+  
+  
+  output$viewPlot <- renderPlot({
+    create_rest_df(input$rest_typing)
+    initializer()
+    zip_code_data(input$variable, all_rest_zip_zc)
+    create_viewports()
+    create_rectangles()
+    generate_hearts(input$heartsfull)
+    generate_axes()
+    generate_points()
+    generate_prez_labels_x(input$rest_typing)
+    generate_prez_labels_y(input$variable)
+    generate_city_names(input$city)
+    
+    
+    
+  })
+  
+}
+
+
+
+ui <- fluidPage(
+  theme = shinytheme("united"),
+  plotOutput("viewPlot",width="100%"),
+  fluidRow(
+    column(3,
+           checkboxInput("city", "Show City Names", FALSE),
+           checkboxInput("heartsfull", "Show Hearts", FALSE)),
+    column(4,
+           selectInput("variable", "Select Y-Axis Variable",
+                       choices = c("Binge Drinking","Obesity","Mental Health Problems",
+                                   "High Blood Pressure","Stroke","Any Cancer",
+                                   "Arthritis", "Asthma",
+                                   "Coronary Heart Disease",
+                                   "Chronic Kidney Disease"))),
+    column(5,
+           selectInput("rest_typing", "Select Cuisine Type",
+                       choices = c("Bar","Vegan", "Fast Food", "Pizza", "American")))),
+  setBackgroundColor(
+    color = "aliceblue",
+    gradient = c("linear", "radial"),
+    direction = c("bottom", "top", "right", "left"),
+    shinydashboard = FALSE
+  )
+)
+
+
+# server <- function(input, output) {
+#   output$value <- renderText({ input$somevalue })
+# }
+
+
+shinyApp(ui,server)
+
+#Colors
+#Red = 4
+#Black = 3
+
+#View(all_bar_port)
+
+#you yourself can talk about it
+```
+
+## Conclusion
+
+- Thank you for watching!
+

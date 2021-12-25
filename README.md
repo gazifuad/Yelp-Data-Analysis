@@ -7,3 +7,5 @@ The Yelp data features information from 160,000+ businesses, 8+ million reviews,
 The CDC dataset features prevalence of various health conditions such as heart disease, obseity, and more from over 32,400 zip codes in the US.
 
 The datasets were cleaned and reduced to focus on a few metropolitan areas in the US. These areas were Atlanta, Austin, Boston, Boulder, Columbus, Orlando, and Portland. 
+
+Our final report can be found [here](STAT 405_605 Final Report.pdf)

@@ -8,4 +8,4 @@ The CDC dataset features prevalence of various health conditions such as heart d
 
 The datasets were cleaned and reduced to focus on a few metropolitan areas in the US. These areas were Atlanta, Austin, Boston, Boulder, Columbus, Orlando, and Portland. 
 
-Our final report can be found [here](https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf)
+Our final report can be found [here](https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf).

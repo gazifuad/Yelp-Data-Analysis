@@ -10,8 +10,10 @@ The datasets were cleaned and reduced to focus on a few metropolitan areas in th
 
 Our final report can be found [here](https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf).
 
-<a href="https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf"> <img src="images/intro.png" width="1010"></a>
+<a href="https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf"> <img src="images/intro.png"></a>
 
-<a href="https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf"> <img src="images/covid.png" width="481"></a> <a href="https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf"><img src="images/heatmap.png" width="524"></a>
+<a href="https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf"> <img src="images/covid.png"></a> 
+
+<a href="https://github.com/gazifuad/Yelp-Data-Analysis/blob/ee92d7fedeefb1a84af824c054b7cc1fcba37376/STAT%20405_605%20Final%20Report.pdf"><img src="images/heatmap.png"></a>
 
 A huge thanks to my teammates: Edward Chen, Colin Jones, Leah Troskot, and Jeff Brover.
